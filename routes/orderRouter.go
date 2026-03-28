@@ -1,11 +1,14 @@
 package routes
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/Sarthak-Java1124/goLang-RestroManager.git/controllers"
+	"github.com/gin-gonic/gin"
+)
 
 func OrderRoutes(incomingRoutes *gin.Engine) {
-	incomingRoutes.GET("/orders", controller.GetOrders())
-	incomingRoutes.GET("/orders/:order_id", controller.GetOrder())
-	incomingRoutes.POST("/orders", controller.CreateOrders())
-	incomingRoutes.PATCH("/orders/:order_id", controller.UpdateMenu())
+	incomingRoutes.GET("/orders", controllers.GetOrders())
+	incomingRoutes.GET("/orders/:order_id", controllers.GetOrder())
+	incomingRoutes.POST("/orders", controllers.CreateOrder())
+	incomingRoutes.PATCH("/orders/:order_id", controllers.UpdateMenu())
 
 }

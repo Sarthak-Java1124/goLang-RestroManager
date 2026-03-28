@@ -1,11 +1,14 @@
 package routes
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/Sarthak-Java1124/goLang-RestroManager.git/controllers"
+	"github.com/gin-gonic/gin"
+)
 
 func TableRoute(incomingRoutes *gin.Engine) {
-	incomingRoutes.GET("/tables", controller.GetTables())
-	incomingRoutes.GET("/tables/:table_id", controller.GetTable())
-	incomingRoutes.POST("/tables", controller.CreateTable())
-	incomingRoutes.PATCH("/tables/:table_id", controller.UpdateTable())
+	incomingRoutes.GET("/tables", controllers.GetTables())
+	incomingRoutes.GET("/tables/:table_id", controllers.GetTable())
+	incomingRoutes.POST("/tables", controllers.CreateTable())
+	incomingRoutes.PATCH("/tables/:table_id", controllers.UpdateTable())
 
 }
