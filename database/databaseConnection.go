@@ -29,3 +29,5 @@ func OpenCollection(client mongo.Client, collectionName string) *mongo.Collectio
 	var collection = client.Database("restaurant").Collection(collectionName)
 	return collection
 }
+
+//golang function for the database connection
