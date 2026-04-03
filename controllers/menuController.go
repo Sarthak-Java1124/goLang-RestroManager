@@ -88,6 +88,17 @@ func CreateMenu() gin.HandlerFunc {
 		now := time.Now()
 		menuBody.Created_at = now
 		menuBody.Updated_at = now
+		menuBody.Menu_id = menuBody.ID.Hex()
+
+		result, insertErr := menuCollection.InsertOne(ctx, menuBody)
+		if insertErr != nil {
+			msg := fmt.Sprintf("Menu item was not created")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			return
+		}
+		defer cancel()
+		c.JSON(http.StatusOK, result)
+		defer cancel()
 	}
 }
 
