@@ -1,6 +1,24 @@
 package controllers
 
-import "github.com/gin-gonic/gin"
+import (
+	"context"
+	"log"
+	"time"
+
+	"github.com/Sarthak-Java1124/goLang-RestroManager.git/database"
+	"github.com/Sarthak-Java1124/goLang-RestroManager.git/models"
+	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+	"go.mongodb.org/mongo-driver/v2/bson"
+)
+
+var userCollection = database.OpenCollection(*database.DBinstance(), "user")
+var validate = validator.New()
+
+type LoginBody struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
 
 func GetUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -16,6 +34,21 @@ func SignUp() gin.HandlerFunc {
 
 func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var user LoginBody
+		var userBody models.User
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := c.BindJSON(&user); err != nil {
+			log.Fatal("Error in binding the user json in login function is : ", err)
+		}
+		validationErr := validate.Struct(&user)
+		if validationErr != nil {
+			log.Fatal("The error in validating the login json is :", validationErr)
+		}
+		err := userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&userBody)
+		if err != nil {
+			log.Fatal("There is no user found in the collection during the login : ", err)
+		}
 
 	}
 }
