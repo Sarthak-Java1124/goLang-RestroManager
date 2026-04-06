@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/Sarthak-Java1124/goLang-RestroManager.git/database"
@@ -22,7 +23,17 @@ type LoginBody struct {
 
 func GetUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		id := c.Param("id")
 
+		var user models.User
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		err := userCollection.FindOne(ctx, bson.M{"id": id}).Decode(&user)
+		if err != nil {
+			log.Fatal("The error in finding the user in the database is : ", err)
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "Successfully fetched user", "data": user})
 	}
 }
 
