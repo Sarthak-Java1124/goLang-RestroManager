@@ -8,6 +8,7 @@ import (
 
 	"github.com/Sarthak-Java1124/goLang-RestroManager.git/database"
 	"github.com/Sarthak-Java1124/goLang-RestroManager.git/models"
+	"github.com/Sarthak-Java1124/goLang-RestroManager.git/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -27,6 +28,7 @@ func GetUser() gin.HandlerFunc {
 
 		var user models.User
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
 		defer cancel()
 
 		err := userCollection.FindOne(ctx, bson.M{"id": id}).Decode(&user)
@@ -60,6 +62,29 @@ func Login() gin.HandlerFunc {
 		if err != nil {
 			log.Fatal("There is no user found in the collection during the login : ", err)
 		}
+
+		refresh_token, err := utils.GenerateRefreshTokens()
+		if err != nil {
+			log.Fatal("The error in generating refresh_token", err)
+		}
+		tokenHash := utils.HashRefreshToken(refresh_token)
+		_, _ = userCollection.UpdateOne(
+			ctx,
+			bson.M{"_id": userBody.ID},
+			bson.M{"$set": bson.M{"refresh_token": tokenHash}},
+		)
+		access_token := utils.GenerateJWTToken(userBody.ID, *userBody.Email)
+		c.SetCookie(w, &http.Cookie{
+			Name:     "refresh_token",
+			Value:    refresh_token,
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteStrictMode,
+			Path:     "/",
+			Expires:  time.Now().Add(7 * 24 * time.Hour),
+		})
+		userBody.Refresh_Token = &tokenHash
+		c.JSON(http.StatusOK, gin.H{"message": "Logged in Successfully", "access_token": access_token})
 
 	}
 }
