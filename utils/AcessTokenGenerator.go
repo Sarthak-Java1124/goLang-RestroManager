@@ -15,7 +15,9 @@ type JWTPayload struct {
 	jwt.RegisteredClaims
 }
 
-func generateJWTToken(userId primitive.ObjectID, email string, privateKey *rsa.PrivateKey) string {
+var privateKey *rsa.PrivateKey
+
+func GenerateJWTToken(userId primitive.ObjectID, email string) string {
 
 	claims := JWTPayload{
 		Email:  email,
