@@ -11,7 +11,9 @@ import (
 	"github.com/Sarthak-Java1124/goLang-RestroManager.git/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var userCollection = database.OpenCollection(*database.DBinstance(), "user")
@@ -20,6 +22,12 @@ var validate = validator.New()
 type LoginBody struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+type SignUpBody struct {
+	Email      string `json:"email"`
+	Password   string `json:"password"`
+	First_name string `json:"first_name"`
+	Last_name  string `json:"last_name"`
 }
 
 func GetUser() gin.HandlerFunc {
@@ -41,7 +49,39 @@ func GetUser() gin.HandlerFunc {
 
 func SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
+		var userBody SignUpBody
+		if err := c.BindJSON(&userBody); err != nil {
+			log.Fatal("The error in binding json in the signup body is : ", err)
+		}
+		validationErr := validate.Struct(&userBody)
+		if validationErr != nil {
+			log.Fatal("There is an error in validating the user body in the signup controller", validationErr)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		var userModel models.User
+		userModel.Email = &userBody.Email
+		userModel.First_name = &userBody.First_name
+		userModel.Last_name = &userBody.Last_name
+		hashedPassword := HashPassword(userBody.Password)
+		userModel.Password = &hashedPassword
+		userModel.ID = primitive.NewObjectID()
+		userModel.User_id = userModel.ID.Hex()
+		now := time.Now()
+		userModel.Created_at = now
+		userModel.Updated_at = now
+		refreshToken, err := utils.GenerateRefreshTokens()
+		if err != nil {
+			log.Fatal("The error in generating the refresh token in the signup controller is :", err)
+		}
+		hashedRefreshToken := utils.HashRefreshToken(refreshToken)
+		userModel.Refresh_Token = &hashedRefreshToken
+		user, err := userCollection.InsertOne(ctx, userModel)
+		if err != nil {
+			log.Fatal("The error in inserting user into mongo db is : ", err)
+		}
+		access_token := utils.GenerateJWTToken(userModel.ID, *userModel.Email)
+		c.JSON(http.StatusOK, gin.H{"message": "User registered successfully", "data": user, "access_token": access_token})
 	}
 }
 
@@ -62,7 +102,11 @@ func Login() gin.HandlerFunc {
 		if err != nil {
 			log.Fatal("There is no user found in the collection during the login : ", err)
 		}
-
+		compare := VerifyHashPassword(user.Password, *userBody.Password)
+		if compare != nil {
+			log.Fatal("The password doesn't match")
+			return
+		}
 		refresh_token, err := utils.GenerateRefreshTokens()
 		if err != nil {
 			log.Fatal("The error in generating refresh_token", err)
@@ -90,13 +134,27 @@ func Login() gin.HandlerFunc {
 }
 func GetUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var userBody models.User
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		data, err := userCollection.Find(ctx, bson.M{})
+		if err != nil {
+			log.Fatal("The error in finding user is : ", err)
+		}
+		data.All(ctx, userBody)
 
+		c.JSON(http.StatusOK, gin.H{"message": "Success returning users", "data": data})
 	}
 }
 func HashPassword(password string) string {
-
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Fatal("The error in hashing password from the given password is : ", err)
+	}
+	return string(hashedPassword)
 }
 
-func VerifyHashPassword(password string, hashedPassword string) (bool, string) {
-
+func VerifyHashPassword(password string, hashedPassword string) error {
+	compare := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+	return compare
 }
